@@ -1,0 +1,92 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: order-service
+  
+  r2dbc:
+    url: r2dbc:postgresql://localhost:5432/orders_db
+    username: ecommerce
+    password: ecommerce123
+    pool:
+      initial-size: 10
+      max-size: 50
+      max-idle-time: 30m
+  
+  data:
+    mongodb:
+      uri: mongodb://mongouser:mongopass123@localhost:27017/events_db?authSource=admin
+      database: events_db
+  
+  kafka:
+    bootstrap-servers: localhost:9094
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      acks: all
+      retries: 3
+    consumer:
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      group-id: order-service-group
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      properties:
+        spring.json.trusted.packages: "*"
+
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+    time-zone: UTC
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+
+logging:
+  level:
+    root: INFO
+    com.ecommerce: DEBUG
+    org.springframework.data.r2dbc: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %X{correlationId} - %5p [%t] %c{1}:%L - %m%n"
+
+app:
+  kafka:
+    topics:
+      order-created: order.created
+      order-confirmed: order.confirmed
+      order-cancelled: order.cancelled
+      payment-processed: payment.processed
+      payment-failed: payment.failed
+      notification-sent: notification.sent
+
+---
+spring:
+  config:
+    activate:
+      on-profile: docker
+  r2dbc:
+    url: ${SPRING_R2DBC_URL}
+    username: ${SPRING_R2DBC_USERNAME}
+    password: ${SPRING_R2DBC_PASSWORD}
+  data:
+    mongodb:
+      uri: ${SPRING_DATA_MONGODB_URI}
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS}
+
+logging:
+  level:
+    root: INFO
+    com.ecommerce: INFO
