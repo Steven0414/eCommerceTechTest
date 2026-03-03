@@ -1,6 +1,5 @@
 package com.ecommerce.notification.infrastructure.persistence;
 
-import com.ecommerce.notification.domain.model.NotificationStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
