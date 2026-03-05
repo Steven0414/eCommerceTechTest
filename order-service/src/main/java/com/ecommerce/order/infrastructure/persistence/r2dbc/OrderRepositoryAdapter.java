@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -130,7 +131,7 @@ public class OrderRepositoryAdapter implements OrderRepository {
             .createdAt(entity.getCreatedAt())
             .updatedAt(entity.getUpdatedAt())
             .version(entity.getVersion())
-            .domainEvents(events)
+            .domainEvents(new ArrayList<>(events))
             .build();
     }
     
