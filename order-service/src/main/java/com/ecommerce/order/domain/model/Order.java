@@ -55,7 +55,7 @@ public class Order {
             .totalAmount(total)
             .createdAt(now)
             .updatedAt(now)
-            .version(0L)
+            .version(null)
             .domainEvents(new ArrayList<>())
             .build();
         

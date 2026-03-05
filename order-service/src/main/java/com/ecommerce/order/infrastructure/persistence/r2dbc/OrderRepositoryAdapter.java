@@ -6,6 +6,7 @@ import com.ecommerce.order.domain.model.OrderStatus;
 import com.ecommerce.order.domain.port.outbound.OrderRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.r2dbc.core.DatabaseClient;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -24,21 +25,45 @@ public class OrderRepositoryAdapter implements OrderRepository {
     
     private final R2dbcOrderRepository orderRepository;
     private final R2dbcOrderItemRepository orderItemRepository;
+    private final DatabaseClient databaseClient;
     
     @Override
     public Mono<Order> save(Order order) {
+        boolean isNewOrder = order.getVersion() == null;
         OrderEntity entity = toEntity(order);
         
         return orderRepository.save(entity)
             .flatMap(savedEntity -> {
-                List<OrderItemEntity> itemEntities = order.getItems().stream()
-                    .map(item -> toItemEntity(item, savedEntity.getId()))
-                    .collect(Collectors.toList());
-                
-                return orderItemRepository.saveAll(itemEntities)
+                if (isNewOrder) {
+                    List<OrderItemEntity> itemEntities = order.getItems().stream()
+                        .map(item -> toItemEntity(item, savedEntity.getId()))
+                        .collect(Collectors.toList());
+
+                    return insertOrderItems(itemEntities)
+                        .thenReturn(toDomain(savedEntity, itemEntities, order.getDomainEvents()));
+                }
+
+                return orderItemRepository.findByOrderId(savedEntity.getId())
                     .collectList()
-                    .map(savedItems -> toDomain(savedEntity, savedItems, order.getDomainEvents()));
+                    .map(existingItems -> toDomain(savedEntity, existingItems, order.getDomainEvents()));
             });
+    }
+
+    private Mono<Void> insertOrderItems(List<OrderItemEntity> itemEntities) {
+        return Flux.fromIterable(itemEntities)
+            .concatMap(item -> databaseClient.sql(
+                    "INSERT INTO order_items (id, order_id, product_id, product_name, quantity, unit_price, subtotal) " +
+                    "VALUES (:id, :orderId, :productId, :productName, :quantity, :unitPrice, :subtotal)"
+                )
+                .bind("id", item.getId())
+                .bind("orderId", item.getOrderId())
+                .bind("productId", item.getProductId())
+                .bind("productName", item.getProductName())
+                .bind("quantity", item.getQuantity())
+                .bind("unitPrice", item.getUnitPrice())
+                .bind("subtotal", item.getSubtotal())
+                .then())
+            .then();
     }
     
     @Override
