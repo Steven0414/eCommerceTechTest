@@ -6,6 +6,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -18,6 +19,7 @@ public class OrderStatusChangedEvent implements DomainEvent {
     private UUID orderId;
     private OrderStatus previousStatus;
     private OrderStatus newStatus;
+    private BigDecimal totalAmount;
     private Instant occurredAt;
     
     @Override

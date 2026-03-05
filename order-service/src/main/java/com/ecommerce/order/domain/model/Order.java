@@ -87,6 +87,7 @@ public class Order {
             .orderId(this.id)
             .previousStatus(previousStatus)
             .newStatus(newStatus)
+            .totalAmount(this.totalAmount)
             .occurredAt(this.updatedAt)
             .build());
     }
