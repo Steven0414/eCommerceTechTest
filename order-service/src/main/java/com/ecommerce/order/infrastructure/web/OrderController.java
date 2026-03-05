@@ -28,6 +28,7 @@ public class OrderController {
     
     private final CreateOrderUseCase createOrderUseCase;
     private final GetOrderUseCase getOrderUseCase;
+    private final ConfirmOrderUseCase confirmOrderUseCase;
     private final CancelOrderUseCase cancelOrderUseCase;
     private final GetOrderEventsUseCase getOrderEventsUseCase;
     
@@ -72,6 +73,25 @@ public class OrderController {
     ) {
         log.debug("Getting orders for customer {} - CorrelationID: {}", customerId, correlationId);
         return getOrderUseCase.executeByCustomer(customerId);
+    }
+
+    @PatchMapping("/{id}/confirm")
+    public Mono<ResponseEntity<Void>> confirmOrder(
+            @PathVariable UUID id,
+            @RequestHeader(value = "X-Correlation-ID", required = false) String correlationId
+    ) {
+        log.info("Confirming order {} - CorrelationID: {}", id, correlationId);
+
+        return confirmOrderUseCase.execute(id)
+            .then(Mono.just(ResponseEntity.noContent().<Void>build()))
+            .onErrorResume(ConfirmOrderUseCase.OrderNotFoundException.class,
+                e -> Mono.just(ResponseEntity.notFound().build()))
+            .onErrorResume(ConfirmOrderUseCase.OrderConfirmationException.class,
+                e -> Mono.just(ResponseEntity.status(HttpStatus.CONFLICT).build()))
+            .onErrorResume(e -> {
+                log.error("Error confirming order", e);
+                return Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build());
+            });
     }
     
     @PatchMapping("/{id}/cancel")

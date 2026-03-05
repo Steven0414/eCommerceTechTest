@@ -1,6 +1,8 @@
 package com.ecommerce.order.infrastructure.messaging.kafka;
 
 import com.ecommerce.order.domain.event.DomainEvent;
+import com.ecommerce.order.domain.event.OrderStatusChangedEvent;
+import com.ecommerce.order.domain.model.OrderStatus;
 import com.ecommerce.order.domain.port.outbound.EventPublisher;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -33,7 +35,7 @@ public class KafkaEventPublisher implements EventPublisher {
     @Override
     public Mono<Void> publish(DomainEvent event) {
         return Mono.fromCallable(() -> {
-            String topic = getTopicForEvent(event.getEventType());
+            String topic = getTopicForEvent(event);
             String json = objectMapper.writeValueAsString(event);
             
             log.info("Publishing event {} to topic {}", event.getEventType(), topic);
@@ -51,5 +53,20 @@ public class KafkaEventPublisher implements EventPublisher {
             case "OrderStatusChanged" -> orderConfirmedTopic;
             default -> orderCreatedTopic;
         };
+    }
+
+    private String getTopicForEvent(DomainEvent event) {
+        if (event instanceof OrderStatusChangedEvent statusChangedEvent) {
+            OrderStatus newStatus = statusChangedEvent.getNewStatus();
+            if (newStatus == OrderStatus.CONFIRMED) {
+                return orderConfirmedTopic;
+            }
+            if (newStatus == OrderStatus.CANCELLED) {
+                return orderCancelledTopic;
+            }
+            return orderCreatedTopic;
+        }
+
+        return getTopicForEvent(event.getEventType());
     }
 }

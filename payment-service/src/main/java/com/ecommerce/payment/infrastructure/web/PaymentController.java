@@ -17,6 +17,15 @@ import java.util.UUID;
 public class PaymentController {
     
     private final PaymentService paymentService;
+
+    @GetMapping
+    public Mono<ResponseEntity<Payment>> getPaymentByOrderIdQuery(@RequestParam UUID orderId) {
+        log.debug("Getting payment for order (query): {}", orderId);
+
+        return paymentService.getPaymentByOrderId(orderId)
+            .map(ResponseEntity::ok)
+            .defaultIfEmpty(ResponseEntity.notFound().build());
+    }
     
     @GetMapping("/{orderId}")
     public Mono<ResponseEntity<Payment>> getPaymentByOrderId(@PathVariable UUID orderId) {
